@@ -1,22 +1,31 @@
+__all__ = ['StopWatch']
+
+import re
 import time
 import csv
 from io import StringIO
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
+
+
 
 
 class StopWatch:
     __START_PROBE_TAG = 'start'
     __STOP_PROBE_TAG = 'stop'
     __DEFAULT_CLICK_TAG_FORMAT = 'click-{:d}'
+    __CUSTOM_TAG_FORMAT = re.compile(r'{{(.*?)}}')
+    __CUSTOM_TAG_QUICK_REPLACE = lambda tag: '{{'+str(tag)+'}}'
 
     __CSV_TAG_HEADLINE = 'Tag'
     __CSV_ELAPSED_TIME_HEADLINE = 'Elapsed Time'
 
-    def __init__(self, debug=False, autostart=False):
-        self.__probes = OrderedDict()
-        self.__probes_n = 0
-        self.__debug_mode = debug
+    def __init__(self, debug=False, autostart=False, custom_tags=True):
+        self.probes = OrderedDict()
+        self.probes_n = 0
+        self.debug_mode = debug
+        self.custom_tags = defaultdict(lambda: 0)
+        self.custom_tags_enabled = custom_tags
         if autostart:
             self.start()
 
@@ -25,14 +34,14 @@ class StopWatch:
         Starts the stopwatch
         :return:
         """
-        self.__probes[StopWatch.__START_PROBE_TAG] = time.time()
+        self.probes[StopWatch.__START_PROBE_TAG] = time.time()
 
     def stop(self):
         """
         Stops the stopwatch
         :return:
         """
-        self.__probes[StopWatch.__STOP_PROBE_TAG] = time.time()
+        self.probes[StopWatch.__STOP_PROBE_TAG] = time.time()
 
     def click(self, tag=None):
         """
@@ -41,17 +50,21 @@ class StopWatch:
         :param tag: Probe's tag. If not present it will choose 'default'
         :return:
         """
-        if not tag:
-            tag = StopWatch.__DEFAULT_CLICK_TAG_FORMAT.format(self.__probes_n)
-            self.__probes_n += 1
-
         aux = time.time()
-        if StopWatch.__START_PROBE_TAG not in self.__probes:
-            self.__probes[StopWatch.__START_PROBE_TAG] = aux
 
-        self.__probes[tag] = aux - self.__probes[StopWatch.__START_PROBE_TAG]
+        if not tag:
+            tag = StopWatch.__DEFAULT_CLICK_TAG_FORMAT.format(self.probes_n)
+            self.probes_n += 1
 
-        return self.__probes[tag]
+        if StopWatch.__START_PROBE_TAG not in self.probes:
+            self.probes[StopWatch.__START_PROBE_TAG] = aux
+
+        if self.custom_tags_enabled:
+            tag = self.__populate_custom_tag(tag)
+
+        self.probes[tag] = aux - self.probes[StopWatch.__START_PROBE_TAG]
+
+        return self.probes[tag]
 
     def pprint_probes(self):
         """
@@ -61,8 +74,8 @@ class StopWatch:
 
         print("TAG\t\t\t ELAPSED TIME")
         print("---\t\t\t ------------\n")
-        for tag, elapsed_time in self.__probes.items():
-            print(tag+"\t\t", elapsed_time)
+        for tag, elapsed_time in self.probes.items():
+            print(tag + "\t\t", elapsed_time)
 
     def csv_dump(self, filepath=""):
         """
@@ -81,7 +94,6 @@ class StopWatch:
         result = self.__write_csv(StringIO())
         return result.getvalue()
 
-
     def __write_csv(self, file):
         """
         Writes all probe information to a generic file
@@ -91,10 +103,18 @@ class StopWatch:
         fieldnames = [StopWatch.__CSV_TAG_HEADLINE, StopWatch.__CSV_ELAPSED_TIME_HEADLINE]
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
-        for tag, elapsed_time in self.__probes.items():
+        for tag, elapsed_time in self.probes.items():
             writer.writerow({StopWatch.__CSV_TAG_HEADLINE: tag, StopWatch.__CSV_ELAPSED_TIME_HEADLINE: elapsed_time})
         return file
 
+    def __populate_custom_tag(self, tag):
+        found_tags = StopWatch.__CUSTOM_TAG_FORMAT.findall(tag)
+        if not found_tags:
+            return tag
+        for found_tag in found_tags:
+            tag = tag.replace(StopWatch.__CUSTOM_TAG_QUICK_REPLACE(found_tag), str(self.custom_tags[found_tag]))
+            self.custom_tags[found_tag] += 1
+        return tag
 
     @property
     def elapsed_time(self):
@@ -103,5 +123,4 @@ class StopWatch:
         :return: Elapsed time
         """
         aux = time.time()
-        return self.__probes.get(StopWatch.__STOP_PROBE_TAG, aux) - self.__probes.get(StopWatch.__START_PROBE_TAG, aux)
-
+        return self.probes.get(StopWatch.__STOP_PROBE_TAG, aux) - self.probes.get(StopWatch.__START_PROBE_TAG, aux)
