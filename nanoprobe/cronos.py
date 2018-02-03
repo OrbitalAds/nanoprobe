@@ -14,8 +14,10 @@ class StopWatch:
     __START_PROBE_TAG = 'start'
     __STOP_PROBE_TAG = 'stop'
     __DEFAULT_CLICK_TAG_FORMAT = 'click-{:d}'
-    __CUSTOM_TAG_FORMAT = re.compile(r'{{(.*?)}}')
-    __CUSTOM_TAG_QUICK_REPLACE = lambda tag: '{{'+str(tag)+'}}'
+    __CUSTOM_AUTOINCREMENT_TAG_FORMAT = re.compile(r'{{(.*?)}}')
+    __CUSTOM_AUTOINCREMENT_TAG_QUICK_REPLACE = lambda tag: '{{' + str(tag) + '}}'
+    __CUSTOM_NONINCREMENTAL_TAG_FORMAT = re.compile(r'{(.*?)}')
+    __CUSTOM_NONINCREMENTAL_TAG_QUICK_REPLACE = lambda tag: '{' + str(tag) + '}'
 
     __CSV_TAG_HEADLINE = 'Tag'
     __CSV_ELAPSED_TIME_HEADLINE = 'Elapsed Time'
@@ -108,12 +110,27 @@ class StopWatch:
         return file
 
     def __populate_custom_tag(self, tag):
-        found_tags = StopWatch.__CUSTOM_TAG_FORMAT.findall(tag)
+        tag = self.__populate_custom_autoincrement_tag(tag)
+        tag = self.__populate_custom_nonincremental_tag(tag)
+        return tag
+
+    def __populate_custom_autoincrement_tag(self, tag):
+        found_tags = StopWatch.__CUSTOM_AUTOINCREMENT_TAG_FORMAT.findall(tag)
         if not found_tags:
             return tag
         for found_tag in found_tags:
-            tag = tag.replace(StopWatch.__CUSTOM_TAG_QUICK_REPLACE(found_tag), str(self.custom_tags[found_tag]))
+            tag = tag.replace(StopWatch.__CUSTOM_AUTOINCREMENT_TAG_QUICK_REPLACE(found_tag),
+                              str(self.custom_tags[found_tag]))
             self.custom_tags[found_tag] += 1
+        return tag
+
+    def __populate_custom_nonincremental_tag(self, tag):
+        found_tags = StopWatch.__CUSTOM_NONINCREMENTAL_TAG_FORMAT.findall(tag)
+        if not found_tags:
+            return tag
+        for found_tag in found_tags:
+            tag = tag.replace(StopWatch.__CUSTOM_NONINCREMENTAL_TAG_QUICK_REPLACE(found_tag),
+                              str(self.custom_tags[found_tag]))
         return tag
 
     @property
