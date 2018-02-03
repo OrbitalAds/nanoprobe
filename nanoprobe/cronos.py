@@ -86,12 +86,12 @@ class StopWatch:
         :param exponential_format: Whether exponential float representation format will be used or not
         :return:
         """
+        float_format = "{:s}\t\t{:g}" if exponential_format else "{:s}\t\t{:f}"
+        maxlen = len(max(self.probes.keys(), key=len))
+        print("\n\n{:s}\t\t{:s}\n".format("TAG".ljust(maxlen, " "), "ELAPSED TIME"))
 
-        print("TAG\t\t\t ELAPSED TIME")
-        print("---\t\t\t ------------\n")
         for tag, elapsed_time in self.probes.items():
-            print(tag + "\t\t {:g}".format(elapsed_time)) if exponential_format else\
-                print(tag + "\t\t {:f}".format(elapsed_time))
+            print(float_format.format(tag.ljust(maxlen, " "), elapsed_time))
 
     def csv_dump(self, filepath="", exponential_format=False):
         """
