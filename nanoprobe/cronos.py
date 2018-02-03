@@ -22,20 +22,20 @@ class StopWatch:
     __CSV_TAG_HEADLINE = 'Tag'
     __CSV_ELAPSED_TIME_HEADLINE = 'Elapsed Time'
 
-    def __init__(self, debug=False, autostart=False, custom_tags=True, precision_rounding=None):
+    def __init__(self, debug=False, autostart=False, custom_tags=True, rounding_precision=None):
         """
         StopWatch initialization
         :param debug: Whether StopWatch is in debug mode or not. Does nothing at the moment.
         :param autostart: Starts the StopWatch automatically if set to 'True'
         :param custom_tags: Whether custom_tags are enabled or disabled (to gain performance)
-        :param precision_rounding: Number of decimal digits to be stored. None means all.
+        :param rounding_precision: Number of decimal digits to be stored. None means all.
         """
         self.probes = OrderedDict()
         self.probes_n = 0
         self.debug_mode = debug
         self.custom_tags = defaultdict(lambda: 0)
         self.custom_tags_enabled = custom_tags
-        self.precision_rounding = precision_rounding
+        self.rounding_precision = rounding_precision
 
         if autostart:
             self.start()
@@ -75,8 +75,8 @@ class StopWatch:
 
         self.probes[tag] = aux - self.probes[StopWatch.__START_PROBE_TAG]
 
-        if self.precision_rounding is not None:
-            self.probes[tag] = round(self.probes[tag], self.precision_rounding)
+        if self.rounding_precision is not None:
+            self.probes[tag] = round(self.probes[tag], self.rounding_precision)
 
         return self.probes[tag]
 
