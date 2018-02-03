@@ -22,12 +22,21 @@ class StopWatch:
     __CSV_TAG_HEADLINE = 'Tag'
     __CSV_ELAPSED_TIME_HEADLINE = 'Elapsed Time'
 
-    def __init__(self, debug=False, autostart=False, custom_tags=True):
+    def __init__(self, debug=False, autostart=False, custom_tags=True, rounding_precision=None):
+        """
+        StopWatch initialization
+        :param debug: Whether StopWatch is in debug mode or not. Does nothing at the moment.
+        :param autostart: Starts the StopWatch automatically if set to 'True'
+        :param custom_tags: Whether custom_tags are enabled or disabled (to gain performance)
+        :param rounding_precision: Number of decimal digits to be stored. None means all.
+        """
         self.probes = OrderedDict()
         self.probes_n = 0
         self.debug_mode = debug
         self.custom_tags = defaultdict(lambda: 0)
         self.custom_tags_enabled = custom_tags
+        self.rounding_precision = rounding_precision
+
         if autostart:
             self.start()
 
@@ -66,55 +75,74 @@ class StopWatch:
 
         self.probes[tag] = aux - self.probes[StopWatch.__START_PROBE_TAG]
 
+        if self.rounding_precision is not None:
+            self.probes[tag] = round(self.probes[tag], self.rounding_precision)
+
         return self.probes[tag]
 
-    def pprint_probes(self):
+    def pprint_probes(self, exponential_format=False):
         """
         Pretty prints all probes registered up to now.
+        :param exponential_format: Whether exponential float representation format will be used or not
         :return:
         """
 
         print("TAG\t\t\t ELAPSED TIME")
         print("---\t\t\t ------------\n")
         for tag, elapsed_time in self.probes.items():
-            print(tag + "\t\t", elapsed_time)
+            print(tag + "\t\t {:g}".format(elapsed_time)) if exponential_format else\
+                print(tag + "\t\t {:f}".format(elapsed_time))
 
-    def csv_dump(self, filepath=""):
+    def csv_dump(self, filepath="", exponential_format=False):
         """
         Dumps all probe information to a csv file
         :param filepath: Path to the taget file
+        :param exponential_format: Whether exponential float representation format will be used or not
         :return:
         """
         with open(filepath, 'w', newline='') as csvfile:
-            self.__write_csv(csvfile)
+            self.__write_csv(csvfile, exponential_format=exponential_format)
 
-    def csv_dumps(self):
+    def csv_dumps(self, exponential_format=False):
         """
         Dumps all probe information into a csv formatted string
+        :param exponential_format: Whether exponential float representation format will be used or not
         :return: String with csv encoded information about the probes
         """
-        result = self.__write_csv(StringIO())
+        result = self.__write_csv(StringIO(), exponential_format=exponential_format)
         return result.getvalue()
 
-    def __write_csv(self, file):
+    def __write_csv(self, file, exponential_format=False):
         """
         Writes all probe information to a generic file
         :param file: Input file
+        :param exponential_format: Whether exponential float representation format will be used or not
         :return: File used to write all information
         """
+        float_format = "{:g}" if exponential_format else "{:f}"
         fieldnames = [StopWatch.__CSV_TAG_HEADLINE, StopWatch.__CSV_ELAPSED_TIME_HEADLINE]
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         for tag, elapsed_time in self.probes.items():
-            writer.writerow({StopWatch.__CSV_TAG_HEADLINE: tag, StopWatch.__CSV_ELAPSED_TIME_HEADLINE: elapsed_time})
+            writer.writerow({StopWatch.__CSV_TAG_HEADLINE: tag, StopWatch.__CSV_ELAPSED_TIME_HEADLINE: float_format.format(elapsed_time)})
         return file
 
     def __populate_custom_tag(self, tag):
+        """
+        Populates a tag with custom tags if available
+        :param tag: Unpopulated tag
+        :return: Populated tag
+        """
         tag = self.__populate_custom_autoincrement_tag(tag)
         tag = self.__populate_custom_nonincremental_tag(tag)
         return tag
 
     def __populate_custom_autoincrement_tag(self, tag):
+        """
+        Checks if autoincrement custom tags are present and populates them
+        :param tag: Unpopulated tag
+        :return: Populated tag
+        """
         found_tags = StopWatch.__CUSTOM_AUTOINCREMENT_TAG_FORMAT.findall(tag)
         if not found_tags:
             return tag
@@ -125,6 +153,11 @@ class StopWatch:
         return tag
 
     def __populate_custom_nonincremental_tag(self, tag):
+        """
+        Checks for non incremental custom tags and populates them
+        :param tag:Unpopulated tag
+        :return: Populated tag
+        """
         found_tags = StopWatch.__CUSTOM_NONINCREMENTAL_TAG_FORMAT.findall(tag)
         if not found_tags:
             return tag
