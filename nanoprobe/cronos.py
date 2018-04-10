@@ -23,7 +23,7 @@ class StopWatch:
     def __init__(self, debug=False, autostart=False, custom_tags=True, rounding_precision=None, logger=None):
         """
         StopWatch initialization
-        :param debug: Whether StopWatch is in debug mode or not. Does nothing at the moment.
+        :param debug: Whether StopWatch is in debug mode or not. At the moment it only sets the default's logging level
         :param autostart: Starts the StopWatch automatically if set to 'True'
         :param custom_tags: Whether custom_tags are enabled or disabled (to gain performance)
         :param rounding_precision: Number of decimal digits to be stored. None means all.
