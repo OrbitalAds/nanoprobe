@@ -69,9 +69,13 @@ class StopWatch:
         if not tag:
             tag = StopWatch.__DEFAULT_CLICK_TAG_FORMAT.format(self.probes_n)
             self.probes_n += 1
+            self.logger.debug("Tag was not given, created one instead: {}".format(tag))
+        else:
+            self.logger.debug("Given tag {}".format(tag))
 
         if StopWatch.__START_PROBE_TAG not in self.probes:
             self.probes[StopWatch.__START_PROBE_TAG] = aux
+            self.logger.debug("Click before start, auto-starting...")
             self.logger.warning("StopWatch clicked before being started, auto-starting...")
 
         if self.custom_tags_enabled:
@@ -79,8 +83,13 @@ class StopWatch:
 
         self.probes[tag] = aux - self.probes[StopWatch.__START_PROBE_TAG]
 
+        self.logger.debug("Using tag {} to store probe".format(tag))
+
         if self.rounding_precision is not None:
+            self.logger.debug("Rounding probe up to {} decimals".format(self.rounding_precision))
             self.probes[tag] = round(self.probes[tag], self.rounding_precision)
+
+
 
         self.logger.info("StopWatch clicked. Tag - {tag} - elapsed time since start: {elapsed}"
                          .format(tag=tag, elapsed=self.probes[tag]))
@@ -141,6 +150,7 @@ class StopWatch:
         :param tag: Unpopulated tag
         :return: Populated tag
         """
+        self.logger.debug("Populating custom tags...")
         tag = self.__populate_custom_autoincrement_tag(tag)
         tag = self.__populate_custom_nonincremental_tag(tag)
         return tag
@@ -154,6 +164,7 @@ class StopWatch:
         found_tags = StopWatch.__CUSTOM_AUTOINCREMENT_TAG_FORMAT.findall(tag)
         if not found_tags:
             return tag
+        self.logger.debug("Found autoincremental tag/s{} in tag {}".format(found_tags, tag))
         for found_tag in found_tags:
             tag = tag.replace(StopWatch.__CUSTOM_AUTOINCREMENT_TAG_QUICK_REPLACE(found_tag),
                               str(self.custom_tags[found_tag]))
@@ -169,6 +180,7 @@ class StopWatch:
         found_tags = StopWatch.__CUSTOM_NONINCREMENTAL_TAG_FORMAT.findall(tag)
         if not found_tags:
             return tag
+        self.logger.debug("Found non-incremental tag/s{} in tag {}".format(found_tags, tag))
         for found_tag in found_tags:
             tag = tag.replace(StopWatch.__CUSTOM_NONINCREMENTAL_TAG_QUICK_REPLACE(found_tag),
                               str(self.custom_tags[found_tag]))
