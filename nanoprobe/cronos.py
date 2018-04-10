@@ -8,8 +8,6 @@ from io import StringIO
 from collections import OrderedDict, defaultdict
 
 
-
-
 class StopWatch:
     __START_PROBE_TAG = 'start'
     __STOP_PROBE_TAG = 'stop'
@@ -22,7 +20,7 @@ class StopWatch:
     __CSV_TAG_HEADLINE = 'Tag'
     __CSV_ELAPSED_TIME_HEADLINE = 'Elapsed Time'
 
-    def __init__(self, debug=False, autostart=False, custom_tags=True, rounding_precision=None):
+    def __init__(self, debug=False, autostart=False, custom_tags=True, rounding_precision=None, logger=None):
         """
         StopWatch initialization
         :param debug: Whether StopWatch is in debug mode or not. Does nothing at the moment.
@@ -36,6 +34,7 @@ class StopWatch:
         self.custom_tags = defaultdict(lambda: 0)
         self.custom_tags_enabled = custom_tags
         self.rounding_precision = rounding_precision
+        self.logger = logger or self.__get_default_logger()
 
         if autostart:
             self.start()
@@ -45,7 +44,10 @@ class StopWatch:
         Starts the stopwatch
         :return:
         """
+        if StopWatch.__START_PROBE_TAG in self.probes:
+            self.logger.warning("Start an already started StopWatch, probes will be messed up.")
         self.probes[StopWatch.__START_PROBE_TAG] = time.time()
+        self.logger.info("StopWatch started at {}".format(self.probes[StopWatch.__START_PROBE_TAG]))
 
     def stop(self):
         """
@@ -53,6 +55,7 @@ class StopWatch:
         :return:
         """
         self.probes[StopWatch.__STOP_PROBE_TAG] = time.time()
+        self.logger.info("StopWatch stopped at {}".format(self.probes[StopWatch.__STOP_PROBE_TAG]))
 
     def click(self, tag=None):
         """
@@ -69,6 +72,7 @@ class StopWatch:
 
         if StopWatch.__START_PROBE_TAG not in self.probes:
             self.probes[StopWatch.__START_PROBE_TAG] = aux
+            self.logger.warning("StopWatch clicked before being started, auto-starting...")
 
         if self.custom_tags_enabled:
             tag = self.__populate_custom_tag(tag)
@@ -77,6 +81,9 @@ class StopWatch:
 
         if self.rounding_precision is not None:
             self.probes[tag] = round(self.probes[tag], self.rounding_precision)
+
+        self.logger.info("StopWatch clicked. Tag - {tag} - elapsed time since start: {elapsed}"
+                         .format(tag=tag, elapsed=self.probes[tag]))
 
         return self.probes[tag]
 
@@ -124,7 +131,8 @@ class StopWatch:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
         for tag, elapsed_time in self.probes.items():
-            writer.writerow({StopWatch.__CSV_TAG_HEADLINE: tag, StopWatch.__CSV_ELAPSED_TIME_HEADLINE: float_format.format(elapsed_time)})
+            writer.writerow({StopWatch.__CSV_TAG_HEADLINE: tag,
+                             StopWatch.__CSV_ELAPSED_TIME_HEADLINE: float_format.format(elapsed_time)})
         return file
 
     def __populate_custom_tag(self, tag):
@@ -166,10 +174,18 @@ class StopWatch:
                               str(self.custom_tags[found_tag]))
         return tag
 
+    def __get_default_logger(self):
+        import logging
+        logging.basicConfig(level=logging.DEBUG - 1 if self.debug_mode else logging.INFO - 1)
+        logger = logging.getLogger("StopWatch")
+        logger.debug("Logger set to debug mode")
+        return logger
+
     @property
     def elapsed_time(self):
         """
-        Elapsed time from starting time to finished time. If the stopwatch is still running it takes now as the finished time.
+        Elapsed time from starting time to finished time. If the stopwatch is still running it takes now as the finished
+        time.
         :return: Elapsed time
         """
         aux = time.time()
