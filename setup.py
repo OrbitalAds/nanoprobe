@@ -14,7 +14,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='nanoprobe',
-    version='0.0.3',
+    version='0.0.4',
     description='Set of tools to profile your shiny python code',
     url='https://github.com/OrbitalAds/nanoprobe',
     author='OrbitalAds',
